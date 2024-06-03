@@ -14,6 +14,11 @@ IF OBJECT_ID('EL_UNICO.envio', 'U') IS NOT NULL DROP TABLE EL_UNICO.envio
 IF OBJECT_ID('EL_UNICO.envio_estado', 'U') IS NOT NULL DROP TABLE EL_UNICO.envio_estado
 IF OBJECT_ID('EL_UNICO.caja', 'U') IS NOT NULL DROP TABLE EL_UNICO.caja
 IF OBJECT_ID('EL_UNICO.tipo_caja', 'U') IS NOT NULL DROP TABLE EL_UNICO.tipo_caja
+IF OBJECT_ID('EL_UNICO.tipo_comprobante', 'U') IS NOT NULL DROP TABLE EL_UNICO.tipo_comprobante
+IF OBJECT_ID('EL_UNICO.producto', 'U') IS NOT NULL DROP TABLE EL_UNICO.producto
+IF OBJECT_ID('EL_UNICO.subcategoria', 'U') IS NOT NULL DROP TABLE EL_UNICO.subcategoria
+IF OBJECT_ID('EL_UNICO.categoria', 'U') IS NOT NULL DROP TABLE EL_UNICO.categoria
+
 
 
 PRINT('se borraron las tablas')
@@ -103,7 +108,7 @@ CREATE TABLE [EL_UNICO].envio (
   envio_envio_estado_id decimal(18,0), /*FK*/
   envio_fecha_entrega datetime NOT NULL,
   envio_tarjeta_id decimal(18,0), /*FK*/
-  CHECK(envio_hora_inicio < envio_hora_fin)
+  --CHECK(envio_hora_inicio < envio_hora_fin) deberia ser con fecha programda fecha entregada
 );
 
 CREATE TABLE [EL_UNICO].sucursal(
@@ -134,9 +139,41 @@ CREATE TABLE [EL_UNICO].tipo_caja (
 );
 
 CREATE TABLE [EL_UNICO].caja (
-  caja_numero decimal(18,0) NOT NULL, /*PK*/
+  caja_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  caja_numero decimal(18,0) NOT NULL,
   caja_tipo_caja_id decimal(18,0) NOT NULL, /*FK*/
 );
+
+CREATE TABLE [EL_UNICO].tipo_comprobante (
+  tipo_compr_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  tipo_compr_detalle nvarchar(255),
+  --PRIMARY KEY (`tipo_compr_id`)
+);
+
+CREATE TABLE [EL_UNICO].categoria (
+  categoria_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  categoria_detalle nvarchar(255),
+  unique(categoria_detalle)
+);
+
+CREATE TABLE [EL_UNICO].subcategoria (
+  subcategoria_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  subcategoria_detalle nvarchar(255),
+  subcategoria_categoria_id decimal(18,0), /*FK*/
+  --PRIMARY KEY (`subcategoria_id`)
+);
+
+CREATE TABLE [EL_UNICO].producto (
+  producto_id decimal(18,0), /*PK*/
+  producto_nombre nvarchar(255),
+  producto_descripcion nvarchar(255),
+  producto_precio decimal(18,2),
+  producto_marca nvarchar(255),
+  producto_sub_categoria decimal(18,0),
+  --PRIMARY KEY (`producto_id`)
+);
+
+
 
 
 
@@ -156,8 +193,11 @@ ALTER TABLE [EL_UNICO].envio_estado ADD CONSTRAINT PK_envio_estado PRIMARY KEY(e
 ALTER TABLE [EL_UNICO].envio ADD CONSTRAINT PK_envio PRIMARY KEY(envio_id);
 ALTER TABLE [EL_UNICO].sucursal ADD CONSTRAINT PK_sucursal PRIMARY KEY(sucursal_id);
 ALTER TABLE [EL_UNICO].empleado ADD CONSTRAINT PK_empleado PRIMARY KEY(empleado_id);
-ALTER TABLE [EL_UNICO].tipo_caja ADD CONSTRAINT PK_tipo_caja PRIMARY KEY(tipo_caja_id)
-ALTER TABLE [EL_UNICO].caja ADD CONSTRAINT PK_caja PRIMARY KEY(caja_numero, caja_tipo_caja_id)
+ALTER TABLE [EL_UNICO].tipo_caja ADD CONSTRAINT PK_tipo_caja PRIMARY KEY(tipo_caja_id);
+ALTER TABLE [EL_UNICO].caja ADD CONSTRAINT PK_caja PRIMARY KEY(caja_id);
+ALTER TABLE [EL_UNICO].tipo_comprobante ADD CONSTRAINT PK_tipo_comprobante PRIMARY KEY(tipo_compr_id);
+ALTER TABLE [EL_UNICO].categoria ADD CONSTRAINT PK_categoria PRIMARY KEY(categoria_id);
+ALTER TABLE [EL_UNICO].subcategoria ADD CONSTRAINT PK_subcategoria PRIMARY KEY(subcategoria_id);
 GO
 
 --agregado de FK-------------
@@ -170,8 +210,9 @@ ALTER TABLE [EL_UNICO].envio ADD CONSTRAINT FK_env_envio_estado FOREIGN KEY(envi
 --ALTER TABLE [EL_UNICO].envio ADD CONSTRAINT FK_env_ticket FOREIGN KEY(envio_ticket_id) REFERENCES [EL_UNICO].ticket(ticket_id);
 ALTER TABLE [EL_UNICO].sucursal ADD CONSTRAINT FK_suc_direccion FOREIGN KEY(sucursal_direccion_id) REFERENCES [EL_UNICO].direccion(direccion_id);
 ALTER TABLE [EL_UNICO].sucursal ADD CONSTRAINT FK_suc_super FOREIGN KEY(sucursal_super_id) REFERENCES [EL_UNICO].super(super_id);
-ALTER TABLE [EL_UNICO].empleado ADD CONSTRAINT FK_empl_sucursal FOREIGN KEY(empleado_sucursal_id) REFERENCES [EL_UNICO].sucursal(sucursal_id)
-ALTER TABLE [EL_UNICO].caja ADD CONSTRAINT FK_caja FOREIGN KEY(caja_tipo_caja_id) REFERENCES [EL_UNICO].tipo_caja(tipo_caja_id)
+ALTER TABLE [EL_UNICO].empleado ADD CONSTRAINT FK_empl_sucursal FOREIGN KEY(empleado_sucursal_id) REFERENCES [EL_UNICO].sucursal(sucursal_id);
+ALTER TABLE [EL_UNICO].caja ADD CONSTRAINT FK_caja_tipo_caja FOREIGN KEY(caja_tipo_caja_id) REFERENCES [EL_UNICO].tipo_caja(tipo_caja_id);
+ALTER TABLE [EL_UNICO].subcategoria ADD CONSTRAINT FK_subcat_categoria FOREIGN KEY(subcategoria_categoria_id) REFERENCES [EL_UNICO].categoria(categoria_id);
 GO
 
 
@@ -435,12 +476,73 @@ PRINT('Se agregaron ' + @cantTiposDeCaja + ' tipos de caja')
 INSERT INTO [EL_UNICO].caja (caja_numero, caja_tipo_caja_id)
 	SELECT distinct CAJA_NUMERO, tipo_caja_id
 	FROM gd_esquema.Maestra JOIN [EL_UNICO].tipo_caja ON CAJA_TIPO = tipo_caja_detalle
-
+	where CAJA_NUMERO is NOT NULL
+/*
+	SELECT distinct CAJA_NUMERO, CAJA_TIPO
+	FROM gd_esquema.Maestra
+	where CAJA_NUMERO is NOT NULL
+	--23
+*/
 DECLARE @cantCajas NVARCHAR(255)
 SET @cantCajas = (SELECT COUNT(*) FROM [EL_UNICO].caja)
 PRINT('Se agregaron ' + @cantCajas + ' cajas')
 
-SELECT * FROM [EL_UNICO].caja
+-----------
+INSERT INTO [EL_UNICO].tipo_comprobante (tipo_compr_detalle)
+	SELECT distinct TICKET_TIPO_COMPROBANTE
+	FROM gd_esquema.Maestra
+	WHERE TICKET_TIPO_COMPROBANTE IS NOT NULL
+/*
+	SELECT distinct TICKET_TIPO_COMPROBANTE
+	FROM gd_esquema.Maestra
+	WHERE TICKET_TIPO_COMPROBANTE IS NOT NULL
+*/
+DECLARE @tiposDeComprobante NVARCHAR(255)
+SET @tiposDeComprobante = (SELECT COUNT(*) FROM [EL_UNICO].tipo_comprobante)
+PRINT('Se agregaron ' + @tiposDeComprobante + ' tipos De Comprobante')
+
+-----------
+INSERT INTO [EL_UNICO].categoria (categoria_detalle)
+	SELECT distinct PRODUCTO_CATEGORIA
+	FROM gd_esquema.Maestra
+	WHERE PRODUCTO_CATEGORIA IS NOT NULL
+	--297119
+	order by 1
+
+DECLARE @categoriasDeProducto NVARCHAR(255)
+SET @categoriasDeProducto = (SELECT COUNT(*) FROM [EL_UNICO].categoria)
+PRINT('Se agregaron ' + @categoriasDeProducto + ' categorias De Producto')
+
+INSERT INTO [EL_UNICO].subcategoria (subcategoria_detalle, subcategoria_categoria_id)
+	SELECT distinct PRODUCTO_SUB_CATEGORIA, categoria_id
+	FROM gd_esquema.Maestra JOIN [EL_UNICO].categoria ON PRODUCTO_CATEGORIA = categoria_detalle
+/*
+	SELECT distinct PRODUCTO_SUB_CATEGORIA, PRODUCTO_CATEGORIA
+	FROM gd_esquema.Maestra
+	WHERE PRODUCTO_SUB_CATEGORIA IS NOT NULL
+	--43
+----------
+SELECT T.PRODUCTO_SUB_CATEGORIA, count(T.PRODUCTO_SUB_CATEGORIA)
+FROM (SELECT distinct PRODUCTO_SUB_CATEGORIA, PRODUCTO_CATEGORIA
+	FROM gd_esquema.Maestra
+	WHERE PRODUCTO_SUB_CATEGORIA IS NOT NULL) as T
+GROUP BY T.PRODUCTO_SUB_CATEGORIA
+order by 2
+-- una subcategoria puede pertencer a varias categorias
+-- se tomo la decision que cada subcategoria son diferentes aun que lleven el mismo numero
+SELECT distinct PRODUCTO_SUB_CATEGORIA, PRODUCTO_CATEGORIA
+FROM gd_esquema.Maestra
+WHERE PRODUCTO_SUB_CATEGORIA = 'SubCategoria N°1019130'
+*/
+
+DECLARE @subCategoriasDeProducto NVARCHAR(255)
+SET @subCategoriasDeProducto = (SELECT COUNT(*) FROM [EL_UNICO].subcategoria)
+PRINT('Se agregaron ' + @subCategoriasDeProducto + ' subcategorias De Producto')
+
+-----------
+
+
+
 
 
 PRINT('SE LLENARON LAS TABLAS')
