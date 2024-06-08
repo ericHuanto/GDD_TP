@@ -1,7 +1,7 @@
 USE GD1C2024
 GO
 
---eliminacion de tablas ------------ se borran primero las que estan en centro y por ultimo los extremos
+--eliminacion de tablas ------------ 
 IF OBJECT_ID('EL_UNICO.empleado', 'U') IS NOT NULL DROP TABLE EL_UNICO.empleado
 IF OBJECT_ID('EL_UNICO.sucursal', 'U') IS NOT NULL DROP TABLE EL_UNICO.sucursal
 IF OBJECT_ID('EL_UNICO.super', 'U') IS NOT NULL DROP TABLE EL_UNICO.super
@@ -15,9 +15,16 @@ IF OBJECT_ID('EL_UNICO.envio_estado', 'U') IS NOT NULL DROP TABLE EL_UNICO.envio
 IF OBJECT_ID('EL_UNICO.caja', 'U') IS NOT NULL DROP TABLE EL_UNICO.caja
 IF OBJECT_ID('EL_UNICO.tipo_caja', 'U') IS NOT NULL DROP TABLE EL_UNICO.tipo_caja
 IF OBJECT_ID('EL_UNICO.tipo_comprobante', 'U') IS NOT NULL DROP TABLE EL_UNICO.tipo_comprobante
+IF OBJECT_ID('EL_UNICO.promocion_x_producto', 'U') IS NOT NULL DROP TABLE EL_UNICO.promocion_x_producto
 IF OBJECT_ID('EL_UNICO.producto', 'U') IS NOT NULL DROP TABLE EL_UNICO.producto
 IF OBJECT_ID('EL_UNICO.subcategoria', 'U') IS NOT NULL DROP TABLE EL_UNICO.subcategoria
 IF OBJECT_ID('EL_UNICO.categoria', 'U') IS NOT NULL DROP TABLE EL_UNICO.categoria
+IF OBJECT_ID('EL_UNICO.marca', 'U') IS NOT NULL DROP TABLE EL_UNICO.marca
+IF OBJECT_ID('EL_UNICO.promocion_x_regla', 'U') IS NOT NULL DROP TABLE EL_UNICO.promocion_x_regla
+IF OBJECT_ID('EL_UNICO.regla', 'U') IS NOT NULL DROP TABLE EL_UNICO.regla
+IF OBJECT_ID('EL_UNICO.promocion', 'U') IS NOT NULL DROP TABLE EL_UNICO.promocion
+IF OBJECT_ID('EL_UNICO.promo', 'U') IS NOT NULL DROP TABLE EL_UNICO.promo
+IF OBJECT_ID('EL_UNICO.tipo_medio_pago', 'U') IS NOT NULL DROP TABLE EL_UNICO.tipo_medio_pago
 
 
 
@@ -33,9 +40,9 @@ GO
 --/eliminacion del schema ----------
 
 --creacion del schema -----------
-CREATE SCHEMA EL_UNICO;
-GO
+exec('CREATE SCHEMA EL_UNICO')
 PRINT('SE CREO EL SCHEMA');
+GO
 --/creacion del schema -----------
 
 
@@ -160,22 +167,61 @@ CREATE TABLE [EL_UNICO].subcategoria (
   subcategoria_id decimal(18,0) IDENTiTY(1,1), /*PK*/
   subcategoria_detalle nvarchar(255),
   subcategoria_categoria_id decimal(18,0), /*FK*/
-  --PRIMARY KEY (`subcategoria_id`)
+);
+
+CREATE TABLE [EL_UNICO].marca (
+  marca_id decimal(18,0) IDENTiTY(1,1),/*PK*/
+  marca_detalle nvarchar(255),
+  unique(marca_detalle)
 );
 
 CREATE TABLE [EL_UNICO].producto (
-  producto_id decimal(18,0), /*PK*/
+  producto_id decimal(18,0) IDENTiTY(1,1), /*PK*/
   producto_nombre nvarchar(255),
   producto_descripcion nvarchar(255),
   producto_precio decimal(18,2),
   producto_marca nvarchar(255),
-  producto_sub_categoria decimal(18,0),
-  --PRIMARY KEY (`producto_id`)
+  producto_subcategoria_id decimal(18,0), /*FK*/
 );
 
+CREATE TABLE [EL_UNICO].regla (
+  regla_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  regla_descripcion nvarchar(255),
+  regla_descuento_aplicable_prod decimal(18,2),
+  regla_cant_aplicable_regla decimal(18,0),
+  regla_cant_aplica_descuento decimal(18,0),
+  regla_cant_max_prod decimal(18,0),
+  regla_aplica_misma_marca decimal(18,0),
+  regla_aplica_mismo_prod decimal(18,0),
+);
 
+CREATE TABLE [EL_UNICO].promocion (
+  promocion_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  promocion_descripcion nvarchar(255),
+  promocion_fecha_inicio datetime,
+  promocion_fecha_fin datetime,
+  --CHECK(envio_hora_inicio < envio_hora_fin) deberia ser con fecha inicio fecha fin
+);
 
+CREATE TABLE [EL_UNICO].promocion_x_regla(
+  promocion_id decimal(18,0) NOT NULL, /*PK FK*/
+  regla_id decimal(18,0) NOT NULL, /*PK FK*/
+);
 
+CREATE TABLE [EL_UNICO].promocion_x_producto(
+  producto_id decimal(18,0) NOT NULL, /*PK FK*/
+  promocion_id decimal(18,0) NOT NULL, /*PK FK*/
+);
+
+CREATE TABLE [EL_UNICO].promo(
+  promo_codigo decimal(18,0) NOT NULL /*PK*/
+);
+
+CREATE TABLE [EL_UNICO].tipo_medio_pago(
+  tipo_medio_pago_id decimal(18,0) IDENTiTY(1,1),/*PK*/
+  tipo_medio_pago_detalle nvarchar(255),
+  unique(tipo_medio_pago_detalle),
+);
 
 
 PRINT('SE CREARON LAS TABLAS')
@@ -198,6 +244,14 @@ ALTER TABLE [EL_UNICO].caja ADD CONSTRAINT PK_caja PRIMARY KEY(caja_id);
 ALTER TABLE [EL_UNICO].tipo_comprobante ADD CONSTRAINT PK_tipo_comprobante PRIMARY KEY(tipo_compr_id);
 ALTER TABLE [EL_UNICO].categoria ADD CONSTRAINT PK_categoria PRIMARY KEY(categoria_id);
 ALTER TABLE [EL_UNICO].subcategoria ADD CONSTRAINT PK_subcategoria PRIMARY KEY(subcategoria_id);
+ALTER TABLE [EL_UNICO].marca ADD CONSTRAINT PK_marca PRIMARY KEY(marca_id);
+ALTER TABLE [EL_UNICO].producto ADD CONSTRAINT PK_producto PRIMARY KEY(producto_id);
+ALTER TABLE [EL_UNICO].regla ADD CONSTRAINT PK_regla PRIMARY KEY(regla_id);
+ALTER TABLE [EL_UNICO].promocion ADD CONSTRAINT PK_promocion PRIMARY KEY(promocion_id);
+ALTER TABLE [EL_UNICO].promocion_x_regla ADD CONSTRAINT PK_promocion_x_regla PRIMARY KEY(promocion_id, regla_id);
+ALTER TABLE [EL_UNICO].promocion_x_producto ADD CONSTRAINT PK_promocion_x_producto PRIMARY KEY(producto_id,promocion_id);
+ALTER TABLE [EL_UNICO].promo ADD CONSTRAINT PK_promo_codigo PRIMARY KEY(promo_codigo);
+ALTER TABLE [EL_UNICO].tipo_medio_pago ADD CONSTRAINT PK_tipo_medio_pago PRIMARY KEY(tipo_medio_pago_id)
 GO
 
 --agregado de FK-------------
@@ -213,6 +267,12 @@ ALTER TABLE [EL_UNICO].sucursal ADD CONSTRAINT FK_suc_super FOREIGN KEY(sucursal
 ALTER TABLE [EL_UNICO].empleado ADD CONSTRAINT FK_empl_sucursal FOREIGN KEY(empleado_sucursal_id) REFERENCES [EL_UNICO].sucursal(sucursal_id);
 ALTER TABLE [EL_UNICO].caja ADD CONSTRAINT FK_caja_tipo_caja FOREIGN KEY(caja_tipo_caja_id) REFERENCES [EL_UNICO].tipo_caja(tipo_caja_id);
 ALTER TABLE [EL_UNICO].subcategoria ADD CONSTRAINT FK_subcat_categoria FOREIGN KEY(subcategoria_categoria_id) REFERENCES [EL_UNICO].categoria(categoria_id);
+ALTER TABLE [EL_UNICO].producto ADD CONSTRAINT FK_prod_subcategoria FOREIGN KEY(producto_subcategoria_id) REFERENCES [EL_UNICO].subcategoria(subcategoria_id);
+ALTER TABLE [EL_UNICO].promocion_x_regla ADD CONSTRAINT FK_promo_x_regla FOREIGN KEY(promocion_id) REFERENCES [EL_UNICO].promocion(promocion_id);
+ALTER TABLE [EL_UNICO].promocion_x_regla ADD CONSTRAINT FK_regla FOREIGN KEY(regla_id) REFERENCES [EL_UNICO].regla(regla_id);
+ALTER TABLE [EL_UNICO].promocion_x_producto ADD CONSTRAINT FK_producto FOREIGN KEY(producto_id) REFERENCES [EL_UNICO].producto(producto_id);
+ALTER TABLE [EL_UNICO].promocion_x_producto ADD CONSTRAINT FK_promo_x_prod FOREIGN KEY(promocion_id) REFERENCES [EL_UNICO].promocion(promocion_id);
+
 GO
 
 
@@ -540,12 +600,288 @@ SET @subCategoriasDeProducto = (SELECT COUNT(*) FROM [EL_UNICO].subcategoria)
 PRINT('Se agregaron ' + @subCategoriasDeProducto + ' subcategorias De Producto')
 
 -----------
+INSERT INTO [EL_UNICO].marca (marca_detalle)
+	SELECT distinct PRODUCTO_MARCA
+	FROM gd_esquema.Maestra
+	WHERE PRODUCTO_MARCA IS NOT NULL
+	--100
+
+DECLARE @marcasDeProducto NVARCHAR(255)
+SET @marcasDeProducto = (SELECT COUNT(*) FROM [EL_UNICO].marca)
+PRINT('Se agregaron ' + @marcasDeProducto + ' marcas De Producto')
+
+-----------
+INSERT INTO [EL_UNICO].producto (producto_nombre, producto_descripcion, producto_precio, producto_marca, producto_subcategoria_id)
+	SELECT distinct PRODUCTO_NOMBRE,PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO, marca_id, subcategoria_id
+	FROM gd_esquema.Maestra JOIN [EL_UNICO].marca ON PRODUCTO_MARCA = marca_detalle
+							JOIN [EL_UNICO].categoria ON PRODUCTO_CATEGORIA = categoria_detalle
+							JOIN [EL_UNICO].subcategoria ON PRODUCTO_SUB_CATEGORIA = subcategoria_detalle AND subcategoria_categoria_id = categoria_id
+	WHERE PRODUCTO_NOMBRE IS NOT NULL 
+	order by PRODUCTO_NOMBRE, subcategoria_id
+/*
+SELECT distinct PRODUCTO_NOMBRE, PRODUCTO_DESCRIPCION, PRODUCTO_SUB_CATEGORIA, PRODUCTO_CATEGORIA, PRODUCTO_MARCA
+FROM gd_esquema.Maestra 
+WHERE PRODUCTO_NOMBRE IS NOT NULL 
+--3742
+*/
+
+/*
+--un producto es de varias categorias
+SELECT t.PRODUCTO_NOMBRE, t.PRODUCTO_SUB_CATEGORIA,count(PRODUCTO_CATEGORIA)
+FROM (
+SELECT distinct PRODUCTO_NOMBRE,PRODUCTO_DESCRIPCION, PRODUCTO_CATEGORIA, PRODUCTO_SUB_CATEGORIA
+FROM gd_esquema.Maestra 
+WHERE PRODUCTO_NOMBRE IS NOT NULL 
+--100 con categoria y subcategoria son 3742
+) as T
+group by t.PRODUCTO_NOMBRE,  t.PRODUCTO_SUB_CATEGORIA
+order by 3 desc
+--- ejemplo de que un producto con mismo subproductos se encuentran en categorias distintas
+SELECT distinct PRODUCTO_NOMBRE,PRODUCTO_DESCRIPCION,PRODUCTO_CATEGORIA
+FROM gd_esquema.Maestra 
+WHERE PRODUCTO_NOMBRE = 'Codigo:0131231312'
 
 
 
+SELECT t.PRODUCTO_NOMBRE,  t.PRODUCTO_DESCRIPCION, t.PRODUCTO_SUB_CATEGORIA, count(t.PRODUCTO_CATEGORIA), count(t.PRODUCTO_MARCA)
+FROM (
+SELECT distinct PRODUCTO_NOMBRE, PRODUCTO_DESCRIPCION, PRODUCTO_SUB_CATEGORIA, PRODUCTO_CATEGORIA, PRODUCTO_MARCA
+FROM gd_esquema.Maestra 
+WHERE PRODUCTO_NOMBRE IS NOT NULL 
+--100 con categoria y subcategoria son 3742
+) as T
+group by t.PRODUCTO_NOMBRE,  t.PRODUCTO_DESCRIPCION, t.PRODUCTO_SUB_CATEGORIA
+order by count(t.PRODUCTO_MARCA) desc
+*/
+DECLARE @productos NVARCHAR(255)
+SET @productos = (SELECT COUNT(*) FROM [EL_UNICO].producto)
+PRINT('Se agregaron ' + @productos + ' productos')
+
+--------
+INSERT INTO [EL_UNICO].regla (regla_descripcion, regla_descuento_aplicable_prod, regla_cant_aplicable_regla, regla_cant_aplica_descuento, regla_cant_max_prod, regla_aplica_misma_marca, regla_aplica_mismo_prod)
+	SELECT distinct REGLA_DESCRIPCION, REGLA_DESCUENTO_APLICABLE_PROD, REGLA_CANT_APLICABLE_REGLA, REGLA_CANT_APLICA_DESCUENTO, REGLA_CANT_MAX_PROD, REGLA_APLICA_MISMA_MARCA, REGLA_APLICA_MISMO_PROD
+	FROM gd_esquema.Maestra
+	WHERE REGLA_DESCRIPCION IS NOT NULL
+/*
+--esta promocion tiene 3 reglas
+SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN, REGLA_DESCRIPCION
+FROM gd_esquema.Maestra
+where PROMOCION_DESCRIPCION is not null AND PROMOCION_FECHA_INICIO = '2024-06-10 00:00:00.000' AND PROMOCION_FECHA_FIN = '2024-06-17 00:00:00.000'
+
+--esta regla tiene 44 promo1
+SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN ,REGLA_DESCRIPCION
+FROM gd_esquema.Maestra
+where PROMOCION_DESCRIPCION is not null AND REGLA_DESCRIPCION = 'Descuento Producto Unico'
+*/
+DECLARE @reglas NVARCHAR(255)
+SET @reglas = (SELECT COUNT(*) FROM [EL_UNICO].regla)
+PRINT('Se agregaron ' + @reglas + ' reglas')
+
+-------
+INSERT INTO [EL_UNICO].promocion (promocion_descripcion, promocion_fecha_inicio, promocion_fecha_fin)
+	SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN
+	FROM gd_esquema.Maestra
+	WHERE PROMOCION_DESCRIPCION IS NOT NULL
+	--44
+DECLARE @promociones NVARCHAR(255)
+SET @promociones = (SELECT COUNT(*) FROM [EL_UNICO].promocion)
+PRINT('Se agregaron ' + @promociones + ' promociones')
+
+---------
+INSERT INTO [EL_UNICO].promocion_x_regla (promocion_id,regla_id)
+	SELECT distinct promocion_id, regla_id
+	FROM gd_esquema.Maestra M JOIN [EL_UNICO].promocion p ON M.PROMOCION_DESCRIPCION = p.promocion_descripcion AND M.PROMOCION_FECHA_INICIO = p.promocion_fecha_inicio AND M.PROMOCION_FECHA_FIN = p.promocion_fecha_fin
+							  JOIN [EL_UNICO].regla r ON M.REGLA_DESCRIPCION = r.regla_descripcion AND M.REGLA_DESCUENTO_APLICABLE_PROD = r.regla_descuento_aplicable_prod AND M.REGLA_CANT_APLICABLE_REGLA = r.regla_cant_aplicable_regla AND M.REGLA_CANT_APLICA_DESCUENTO = r.regla_cant_aplica_descuento AND M.REGLA_CANT_MAX_PROD = r.regla_cant_max_prod AND M.REGLA_APLICA_MISMA_MARCA = r.regla_aplica_misma_marca AND M.REGLA_APLICA_MISMO_PROD = r.regla_aplica_mismo_prod
+
+/*SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN, REGLA_DESCRIPCION, REGLA_APLICA_MISMA_MARCA, REGLA_APLICA_MISMO_PROD
+FROM gd_esquema.Maestra
+where PROMOCION_DESCRIPCION is not null
+--132
+
+---como se observa con esto todos las promociones tienen 3 reglas 
+SELECT t.PROMOCION_DESCRIPCION, t.PROMOCION_FECHA_INICIO, t.PROMOCION_FECHA_FIN, count(t.REGLA_DESCRIPCION)
+FROM (SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN, REGLA_DESCRIPCION
+	FROM gd_esquema.Maestra
+	where PROMOCION_DESCRIPCION is not null) as t
+GROUP BY t.PROMOCION_DESCRIPCION, t.PROMOCION_FECHA_INICIO, t.PROMOCION_FECHA_FIN
+*/
+DECLARE @promocion_X_regla NVARCHAR(255)
+SET @promocion_X_regla = (SELECT COUNT(*) FROM [EL_UNICO].promocion_x_regla)
+PRINT('Se agregaron: ' + @promocion_X_regla + ' promocion_x_regla' + ' hay 44 promociones y 3 reglas, lo que significa que cada promocion tiene todas las reglas')
+
+--------
+INSERT INTO [EL_UNICO].promocion_x_producto (producto_id, promocion_id)
+	SELECT distinct producto_id, promocion_id
+	FROM gd_esquema.Maestra M JOIN [EL_UNICO].categoria ON M.PRODUCTO_CATEGORIA = categoria_detalle
+							  JOIN [EL_UNICO].subcategoria ON M.PRODUCTO_SUB_CATEGORIA = subcategoria_detalle AND subcategoria_categoria_id = categoria_id
+							  JOIN [EL_UNICO].marca ON m.PRODUCTO_MARCA = marca_detalle
+							  JOIN [EL_UNICO].producto prod ON M.PRODUCTO_NOMBRE = prod.producto_nombre AND M.PRODUCTO_DESCRIPCION = prod.producto_descripcion AND  M.PRODUCTO_PRECIO = prod.producto_precio AND prod.producto_marca = marca_id AND prod.producto_subcategoria_id = subcategoria_id
+							  JOIN [EL_UNICO].promocion p ON M.PROMOCION_DESCRIPCION = p.promocion_descripcion AND M.PROMOCION_FECHA_INICIO = p.promocion_fecha_inicio AND M.PROMOCION_FECHA_FIN = P.promocion_fecha_fin
+/*
+SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN, PRODUCTO_NOMBRE, PRODUCTO_DESCRIPCION, PRODUCTO_MARCA, PRODUCTO_SUB_CATEGORIA,PRODUCTO_CATEGORIA
+FROM gd_esquema.Maestra
+where PROMOCION_DESCRIPCION is not null
+--57458
+
+--------- ejemplo de que un producto puede tener varias promociones aplicadas
+SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN, PRODUCTO_NOMBRE, PRODUCTO_DESCRIPCION, PRODUCTO_MARCA, PRODUCTO_SUB_CATEGORIA,PRODUCTO_CATEGORIA
+FROM gd_esquema.Maestra
+where PROMOCION_DESCRIPCION is not null AND PRODUCTO_NOMBRE = 'Codigo:0131231312' AND PRODUCTO_DESCRIPCION = 'Descripcion del Producto N°:0131231312' AND PRODUCTO_MARCA = 'Marca N°1213414124' AND PRODUCTO_SUB_CATEGORIA = 'SubCategoria N°1019132' AND PRODUCTO_CATEGORIA = 'Categoria N°1241412'
+------- verificacion en nuestra nueva tabla
+SELECT *
+FROM [EL_UNICO].promocion_x_producto
+WHERE producto_id = 7
+*/
+DECLARE @promocion_x_producto NVARCHAR(255)
+SET @promocion_x_producto = (SELECT COUNT(*) FROM [EL_UNICO].promocion_x_producto)
+PRINT('Se agregaron ' + @promocion_x_producto + ' promocion_x_producto' + ' hay 3742 productos y 44 promociones, lo que significa que un producto No tiene todas las promociones')
+
+/*
+---------
+SELECT T.TICKET_NUMERO ,T.TICKET_DET_CANTIDAD, T.TICKET_DET_PRECIO, T.TICKET_DET_TOTAL, count(T.PROMO_CODIGO)
+FROM(
+SELECT distinct TICKET_NUMERO, TICKET_DET_CANTIDAD, TICKET_DET_PRECIO, TICKET_DET_TOTAL, PROMO_CODIGO
+FROM gd_esquema.Maestra
+WHERE TICKET_DET_CANTIDAD IS NOT NULL) AS T
+GROUP BY T.TICKET_NUMERO, T.TICKET_DET_CANTIDAD, T.TICKET_DET_PRECIO, T.TICKET_DET_TOTAL
+---37375
 
 
-PRINT('SE LLENARON LAS TABLAS')
+--- todos los ticket datalles
+SELECT distinct TICKET_NUMERO,PRODUCTO_NOMBRE ,TICKET_DET_CANTIDAD, TICKET_DET_PRECIO, TICKET_DET_TOTAL, PROMO_CODIGO, PROMO_APLICADA_DESCUENTO
+FROM gd_esquema.Maestra
+WHERE TICKET_DET_CANTIDAD IS NOT NULL
+ORDER BY 1, PROMO_CODIGO desc
+--273177
+*/
+
+--- 
+/*
+SELECT  t.ticket_numero, count(t.PRODUCTO_NOMBRE), count(t.promo_codigo)
+FROM 
+(SELECT distinct TICKET_NUMERO,PRODUCTO_NOMBRE ,TICKET_DET_CANTIDAD, TICKET_DET_PRECIO, TICKET_DET_TOTAL, PROMO_CODIGO, PROMO_APLICADA_DESCUENTO
+FROM gd_esquema.Maestra
+WHERE TICKET_DET_CANTIDAD IS NOT NULL
+) as t
+group by t.ticket_numero
+order by 3 desc
+--hay dos casos para ver con ticket_numero = 1351344648 ó 1352226127
+-- el tercer caso tiene...
+SELECT distinct TICKET_NUMERO, PRODUCTO_NOMBRE, PRODUCTO_MARCA,PRODUCTO_SUB_CATEGORIA,PROMOCION_DESCRIPCION,PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN,TICKET_DET_PRECIO, TICKET_DET_CANTIDAD, TICKET_DET_TOTAL, PROMO_CODIGO, PROMO_APLICADA_DESCUENTO
+FROM gd_esquema.Maestra
+WHERE TICKET_NUMERO = '1351344648' OR TICKET_NUMERO = '1352226127' OR TICKET_NUMERO = '1354176996'
+order by TICKET_NUMERO, PROMO_CODIGO
+*/
+/*
+--- hablamos de un ticket especifico de un producto especifico cuantos codigos tiene
+SELECT TICKET_NUMERO, PRODUCTO_NOMBRE, PRODUCTO_MARCA, PRODUCTO_SUB_CATEGORIA, count(PROMO_CODIGO)
+FROM (SELECT distinct TICKET_NUMERO, PRODUCTO_NOMBRE, PRODUCTO_MARCA, PRODUCTO_SUB_CATEGORIA,PROMOCION_DESCRIPCION,PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN,TICKET_DET_PRECIO, TICKET_DET_CANTIDAD, TICKET_DET_TOTAL, PROMO_CODIGO, PROMO_APLICADA_DESCUENTO
+FROM gd_esquema.Maestra
+) as T
+GRoup by TICKET_NUMERO, PRODUCTO_NOMBRE, PRODUCTO_MARCA, PRODUCTO_SUB_CATEGORIA
+order by count(PROMO_CODIGO) desc
+
+--- Revisar este ticket
+SELECT distinct TICKET_NUMERO, PRODUCTO_NOMBRE, PRODUCTO_MARCA, PRODUCTO_SUB_CATEGORIA,PROMOCION_DESCRIPCION,PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN,TICKET_DET_PRECIO, TICKET_DET_CANTIDAD, TICKET_DET_TOTAL, PROMO_CODIGO, PROMO_APLICADA_DESCUENTO
+SELECT *
+FROM gd_esquema.Maestra
+WHERE TICKET_NUMERO = '1354176996' AND PRODUCTO_NOMBRE ='Codigo:6131231312'
+
+SELECT *
+FROM gd_esquema.Maestra
+WHERE TICKET_NUMERO = '1354176996' 
+*/
+
+-----------
+INSERT INTO [EL_UNICO].promo (promo_codigo)
+	SELECT distinct PROMO_CODIGO
+	FROM gd_esquema.Maestra
+	WHERE PROMO_CODIGO IS NOT NULL
+	order by 1
+
+DECLARE @promo_codigo NVARCHAR(255)
+SET @promo_codigo = (SELECT COUNT(*) FROM [EL_UNICO].promo)
+PRINT('Se agregaron ' + @promo_codigo + ' promo_codigo')
+
+
+-----------
+INSERT INTO [EL_UNICO].tipo_medio_pago 
+	SELECT distinct PAGO_TIPO_MEDIO_PAGO
+	FROM gd_esquema.Maestra
+	WHERE PAGO_TIPO_MEDIO_PAGO IS NOT NULL
+
+DECLARE @tipos_de_medio_de_pago NVARCHAR(255)
+SET @tipos_de_medio_de_pago = (SELECT COUNT(*) FROM [EL_UNICO].tipo_medio_pago)
+PRINT('Se agregaron ' + @tipos_de_medio_de_pago + ' tipos de medio de pago')
+
+-----------
+INSERT INTO [EL_UNICO].medio_pago()
+
+SELECT distinct PAGO_MEDIO_PAGO
+FROM gd_esquema.Maestra
+WHERE PAGO_MEDIO_PAGO is not null 
+--7
+SELECT distinct PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO, DESCUENTO_TOPE, DESCUENTO_DESCRIPCION
+FROM gd_esquema.Maestra
+WHERE PAGO_MEDIO_PAGO is not null
+--7
+
+---- un descuento codigo se utiliza en varios medios de pago
+SELECT T.DESCUENTO_CODIGO, COUNT(T.DESCUENTO_CODIGO)
+FROM (
+SELECT distinct PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO, DESCUENTO_DESCRIPCION, DESCUENTO_CODIGO
+FROM gd_esquema.Maestra
+WHERE PAGO_MEDIO_PAGO is not null) as T
+GROUP BY DESCUENTO_CODIGO
+Order by COUNT(T.DESCUENTO_CODIGO) desc
+--todos 1 ok
+
+-- ejempplo de que un ticket, relamente deberian ser dos tickets
+SELECT PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO, DESCUENTO_DESCRIPCION, DESCUENTO_CODIGO, PAGO_DESCUENTO_APLICADO, TICKET_TOTAL_ENVIO,TICKET_TOTAL_DESCUENTO_APLICADO_MP, TICKET_TOTAL_TICKET
+FROM gd_esquema.Maestra
+WHERE TICKET_NUMERO = '1351465859'
+
+SELECT PAGO_TARJETA_NRO, count(PAGO_TARJETA_NRO)
+FROM(
+SELECT distinct PAGO_MEDIO_PAGO, PAGO_TARJETA_NRO
+FROM gd_esquema.Maestra) as t
+GROUP BY PAGO_TARJETA_NRO
+order by 2 desc
+-----------------
+demostracion que con una tarjeta solo se hizo un pago
+SELECT TICKET_NUMERO, count(ticket_numero)
+FROM(
+SELECT distinct TICKET_NUMERO, PAGO_IMPORTE, TICKET_TOTAL_TICKET,PAGO_TARJETA_NRO 
+FROM gd_esquema.Maestra
+WHERE TICKET_NUMERO IS NOT NULL AND PAGO_IMPORTE IS NOT NULL  AND PAGO_TARJETA_NRO IS NOT NULL ) as t
+GROUP BY TICKET_NUMERO
+order by TICKET_NUMERO desc
+
+/*
+------------para ver que hay ticket numeros que se pagaron en varias formas de pago
+SELECT z.ticket_numero, z.TICKET_TOTAL_ENVIO ,count(z.TICKET_NUMERO)
+FROM (
+SELECT distinct TICKET_NUMERO, PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO, TICKET_TOTAL_ENVIO
+FROM gd_esquema.Maestra 
+WHERE PAGO_MEDIO_PAGO IS NOT NULL AND PAGO_TIPO_MEDIO_PAGO IS NOT NULL) as z
+GROUP BY z.TICKET_NUMERO, z.TICKET_TOTAL_ENVIO
+Order by 3 desc, 1
+
+-- un ticket fue pagado con tarjeta de credito y debito
+SELECT distinct TICKET_NUMERO, PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO
+FROM gd_esquema.Maestra 
+WHERE TICKET_NUMERO = '1351465859'
+
+-- un ticket fue pagado con tarjeta de debito y billera virtual
+SELECT distinct TICKET_NUMERO, PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO
+FROM gd_esquema.Maestra 
+WHERE TICKET_NUMERO = '1351540937'
+*/
+
+
+
+PRINT('')
+PRINT('SE LLENARON LAS TABLAS :)')
 GO
 --/llenado de tablas
 
@@ -612,4 +948,10 @@ order by 2 desc, 1 asc
 1354551350
 */
 
-
+/*
+--CUANDO REVISES UN TICKET NUMERO ESPECIFICO REVISAR ESTO
+SELECT *
+FROM gd_esquema.Maestra
+WHERE TICKET_NUMERO = '1354176996'
+-- difieree en: ticket_det_cantidad,..det..,empleado_nombre, pago_fecha, pago...,
+*/
