@@ -2,6 +2,10 @@ USE GD1C2024
 GO
 
 --eliminacion de tablas ------------ 
+IF OBJECT_ID('EL_UNICO.envio', 'U') IS NOT NULL DROP TABLE EL_UNICO.envio
+IF OBJECT_ID('EL_UNICO.pago', 'U') IS NOT NULL DROP TABLE EL_UNICO.pago
+IF OBJECT_ID('EL_UNICO.ticket_detalle', 'U') IS NOT NULL DROP TABLE EL_UNICO.ticket_detalle
+IF OBJECT_ID('EL_UNICO.ticket', 'U') IS NOT NULL DROP TABLE EL_UNICO.ticket
 IF OBJECT_ID('EL_UNICO.empleado', 'U') IS NOT NULL DROP TABLE EL_UNICO.empleado
 IF OBJECT_ID('EL_UNICO.sucursal', 'U') IS NOT NULL DROP TABLE EL_UNICO.sucursal
 IF OBJECT_ID('EL_UNICO.super', 'U') IS NOT NULL DROP TABLE EL_UNICO.super
@@ -10,7 +14,6 @@ IF OBJECT_ID('EL_UNICO.cliente', 'U') IS NOT NULL DROP TABLE EL_UNICO.cliente
 IF OBJECT_ID('EL_UNICO.direccion', 'U') IS NOT NULL DROP TABLE EL_UNICO.direccion
 IF OBJECT_ID('EL_UNICO.localidad', 'U') IS NOT NULL DROP TABLE EL_UNICO.localidad
 IF OBJECT_ID('EL_UNICO.provincia', 'U') IS NOT NULL DROP TABLE EL_UNICO.provincia
-IF OBJECT_ID('EL_UNICO.envio', 'U') IS NOT NULL DROP TABLE EL_UNICO.envio
 IF OBJECT_ID('EL_UNICO.envio_estado', 'U') IS NOT NULL DROP TABLE EL_UNICO.envio_estado
 IF OBJECT_ID('EL_UNICO.caja', 'U') IS NOT NULL DROP TABLE EL_UNICO.caja
 IF OBJECT_ID('EL_UNICO.tipo_caja', 'U') IS NOT NULL DROP TABLE EL_UNICO.tipo_caja
@@ -24,13 +27,16 @@ IF OBJECT_ID('EL_UNICO.promocion_x_regla', 'U') IS NOT NULL DROP TABLE EL_UNICO.
 IF OBJECT_ID('EL_UNICO.regla', 'U') IS NOT NULL DROP TABLE EL_UNICO.regla
 IF OBJECT_ID('EL_UNICO.promocion', 'U') IS NOT NULL DROP TABLE EL_UNICO.promocion
 IF OBJECT_ID('EL_UNICO.promo', 'U') IS NOT NULL DROP TABLE EL_UNICO.promo
+IF OBJECT_ID('EL_UNICO.descuento_x_medio_de_pago', 'U') IS NOT NULL DROP TABLE EL_UNICO.descuento_x_medio_de_pago
+IF OBJECT_ID('EL_UNICO.medio_de_pago', 'U') IS NOT NULL DROP TABLE EL_UNICO.medio_de_pago
 IF OBJECT_ID('EL_UNICO.tipo_medio_pago', 'U') IS NOT NULL DROP TABLE EL_UNICO.tipo_medio_pago
-
-
+IF OBJECT_ID('EL_UNICO.descuento', 'U') IS NOT NULL DROP TABLE EL_UNICO.descuento
+--IF OBJECT_ID('EL_UNICO.tarjeta', 'U') IS NOT NULL DROP TABLE EL_UNICO.tarjeta
 
 PRINT('se borraron las tablas')
 GO
 --/eliminacion de tablas------------
+
 
 --eliminacion del schema -----------
 IF EXISTS (SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'EL_UNICO')
@@ -38,6 +44,7 @@ DROP SCHEMA EL_UNICO;
 PRINT('se borro el schema')
 GO
 --/eliminacion del schema ----------
+
 
 --creacion del schema -----------
 exec('CREATE SCHEMA EL_UNICO')
@@ -105,19 +112,6 @@ CREATE TABLE [EL_UNICO].envio_estado (
   unique(envio_estado_detalle)
 );
 
-CREATE TABLE [EL_UNICO].envio (
-  envio_id decimal(18,0) IDENTiTY(1,1), /*PK*/
-  envio_fecha_programada datetime NOT NULL,
-  envio_hora_inicio decimal(18,0),
-  envio_hora_fin decimal(18,0),
-  envio_cliente_id decimal(18,0) NULL, /*FK*/
-  envio_costo decimal(18,2) NOT NULL,
-  envio_envio_estado_id decimal(18,0), /*FK*/
-  envio_fecha_entrega datetime NOT NULL,
-  envio_tarjeta_id decimal(18,0), /*FK*/
-  --CHECK(envio_hora_inicio < envio_hora_fin) deberia ser con fecha programda fecha entregada
-);
-
 CREATE TABLE [EL_UNICO].sucursal(
   sucursal_id decimal(18,0) IDENTiTY(1,1), /*PK*/
   sucursal_nombre nvarchar(255) NOT NULL,
@@ -180,7 +174,7 @@ CREATE TABLE [EL_UNICO].producto (
   producto_nombre nvarchar(255),
   producto_descripcion nvarchar(255),
   producto_precio decimal(18,2),
-  producto_marca nvarchar(255),
+  producto_marca_id decimal(18,0), /*FK*/
   producto_subcategoria_id decimal(18,0), /*FK*/
 );
 
@@ -214,7 +208,9 @@ CREATE TABLE [EL_UNICO].promocion_x_producto(
 );
 
 CREATE TABLE [EL_UNICO].promo(
-  promo_codigo decimal(18,0) NOT NULL /*PK*/
+  promo_id decimal(18,0) IDENTiTY(1,1),  /*PK*/
+  promo_codigo decimal(18,0),
+  promo_aplica_descuento decimal(18,2),
 );
 
 CREATE TABLE [EL_UNICO].tipo_medio_pago(
@@ -223,6 +219,84 @@ CREATE TABLE [EL_UNICO].tipo_medio_pago(
   unique(tipo_medio_pago_detalle),
 );
 
+CREATE TABLE [EL_UNICO].medio_de_pago (
+  medio_pago_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  medio_pago_detalle nvarchar(255),
+  medio_pago_tipo_id decimal(18,0), /*FK*/
+);
+
+CREATE TABLE [EL_UNICO].descuento (
+  descuento_codigo decimal(18,0) NOT NULL, /*PK*/
+  descuento_Descripcion nvarchar(255),
+  descuento_fecha_inicio datetime,
+  descuento_fecha_fin datetime,
+  descuento_porcentaje_desc decimal(18,2),
+  descuento_tope decimal(18,2),
+);
+
+CREATE TABLE [EL_UNICO].descuento_x_medio_de_pago(
+  descuento_codigo decimal(18,0) NOT NULL, /*PK FK*/
+  medio_de_pago_id decimal(18,0) NOT NULL, /*PK FK*/
+);
+/*
+CREATE TABLE [EL_UNICO].tarjeta(
+  tarjeta_id decimal(18,0) IDENTiTY(1,1),
+  pago_tarjeta_nro nvarchar(50),
+  pago_tarjetas_cuotas decimal(18,0),
+  pago_tarjetas_fecha_venc datetime,
+);
+*/
+CREATE TABLE [EL_UNICO].ticket (
+  ticket_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  ticket_numero decimal(18,0),
+  ticket_fecha_hora datetime,
+  ticket_tipo_comprobante_id decimal(18,0), /*FK*/
+  ticket_caja_id decimal(18,0), /*FK*/
+  ticket_empleado_id decimal(18,0), /*FK*/
+  ticket_sucursal_id decimal(18,0), /*FK*/
+  ticket_subtotal_productos decimal(18,2),
+  ticket_total_envio decimal(18,2),
+  ticket_total_descuento_aplicado decimal(18,2),
+  ticket_total_descuento_aplicado_mp decimal(18,2),
+  ticket_total_ticket decimal(18,2),
+  --ticket_envio_id decimal(18,0) NULL, /*FK*/ /*hay ticket que no tienen envio*/
+);
+
+CREATE TABLE [EL_UNICO].envio (
+  envio_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  envio_fecha_programada datetime NOT NULL,
+  envio_hora_inicio decimal(18,0),
+  envio_hora_fin decimal(18,0),
+  envio_cliente_id decimal(18,0), /*FK*/
+  envio_ticket_id decimal(18,0), /*FK*/
+  envio_costo decimal(18,2) NOT NULL,
+  envio_envio_estado_id decimal(18,0), /*FK*/
+  envio_fecha_entrega datetime NOT NULL,
+  --CHECK(envio_hora_inicio < envio_hora_fin) deberia ser con fecha programda fecha entregada
+);
+
+
+CREATE TABLE [EL_UNICO].pago (
+  pago_id decimal(18,0) IDENTiTY(1,1), /*PK*/
+  pago_ticket_id decimal(18,0), /*FK*/
+  pago_fecha datetime,
+  pago_medio_pago_id decimal(18,0), /*FK*/
+  pago_descuento_aplicado decimal(18,0),
+  pago_importe decimal(18,2),
+  --pago_tarjeta_id decimal(18,0) NULL, /*FK hay medio de pago efectivo por lo que esto seria null */
+  pago_tarjeta_nro nvarchar(50),
+  pago_tarjetas_cuotas decimal(18,0),
+  pago_tarjetas_fecha_venc datetime,
+);
+
+CREATE TABLE [EL_UNICO].ticket_detalle(
+  ticket_id decimal(18,0) NOT NULL, /*PK FK*/
+  prodcuto_id decimal(18,0) NOT NULL, /*PK FK*/
+  ticket_det_cantidad decimal(18,0),
+  ticket_det_precio decimal(18,2),
+  ticket_det_total decimal(18,2),
+  ticket_det_promo_id decimal(18,0) NULL, /*FK algunos no tienen descuento aplicado*/ 
+);
 
 PRINT('SE CREARON LAS TABLAS')
 GO
@@ -250,8 +324,14 @@ ALTER TABLE [EL_UNICO].regla ADD CONSTRAINT PK_regla PRIMARY KEY(regla_id);
 ALTER TABLE [EL_UNICO].promocion ADD CONSTRAINT PK_promocion PRIMARY KEY(promocion_id);
 ALTER TABLE [EL_UNICO].promocion_x_regla ADD CONSTRAINT PK_promocion_x_regla PRIMARY KEY(promocion_id, regla_id);
 ALTER TABLE [EL_UNICO].promocion_x_producto ADD CONSTRAINT PK_promocion_x_producto PRIMARY KEY(producto_id,promocion_id);
-ALTER TABLE [EL_UNICO].promo ADD CONSTRAINT PK_promo_codigo PRIMARY KEY(promo_codigo);
-ALTER TABLE [EL_UNICO].tipo_medio_pago ADD CONSTRAINT PK_tipo_medio_pago PRIMARY KEY(tipo_medio_pago_id)
+ALTER TABLE [EL_UNICO].promo ADD CONSTRAINT PK_promo_id PRIMARY KEY(promo_id);
+ALTER TABLE [EL_UNICO].tipo_medio_pago ADD CONSTRAINT PK_tipo_medio_pago PRIMARY KEY(tipo_medio_pago_id);
+ALTER TABLE [EL_UNICO].medio_de_pago ADD CONSTRAINT PK_medio_pago PRIMARY KEY(medio_pago_id);
+ALTER TABLE [EL_UNICO].descuento ADD CONSTRAINT PK_descuento PRIMARY KEY(descuento_codigo);
+ALTER TABLE [EL_UNICO].descuento_x_medio_de_pago ADD CONSTRAINT PK_descuento_x_medio_pago PRIMARY KEY(descuento_codigo, medio_de_pago_id);
+--ALTER TABLE [EL_UNICO].tarjeta ADD CONSTRAINT PK_tarjeta PRIMARY KEY(tarjeta_id);
+ALTER TABLE [EL_UNICO].ticket ADD CONSTRAINT PK_TICKET PRIMARY KEY(ticket_id);
+ALTER TABLE [EL_UNICO].pago ADD CONSTRAINT PK_pago PRIMARY KEY(pago_id);
 GO
 
 --agregado de FK-------------
@@ -261,18 +341,28 @@ ALTER TABLE [EL_UNICO].super ADD CONSTRAINT FK_super_direccion FOREIGN KEY(super
 ALTER TABLE [EL_UNICO].super ADD CONSTRAINT FK_super_condicion_fiscal FOREIGN KEY(super_condicion_fiscal_id) REFERENCES [EL_UNICO].condicion_fiscal(condicion_fiscal_id);
 ALTER TABLE [EL_UNICO].cliente ADD CONSTRAINT FK_clie_direccion FOREIGN KEY(cliente_direccion_id) REFERENCES [EL_unico].direccion(direccion_id);
 ALTER TABLE [EL_UNICO].envio ADD CONSTRAINT FK_env_envio_estado FOREIGN KEY(envio_envio_estado_id) REFERENCES [EL_UNICO].envio_estado(envio_estado_id);
---ALTER TABLE [EL_UNICO].envio ADD CONSTRAINT FK_env_ticket FOREIGN KEY(envio_ticket_id) REFERENCES [EL_UNICO].ticket(ticket_id);
+ALTER TABLE [EL_UNICO].envio ADD CONSTRAINT FK_env_ticket FOREIGN KEY(envio_ticket_id) REFERENCES [EL_UNICO].ticket(ticket_id);
 ALTER TABLE [EL_UNICO].sucursal ADD CONSTRAINT FK_suc_direccion FOREIGN KEY(sucursal_direccion_id) REFERENCES [EL_UNICO].direccion(direccion_id);
 ALTER TABLE [EL_UNICO].sucursal ADD CONSTRAINT FK_suc_super FOREIGN KEY(sucursal_super_id) REFERENCES [EL_UNICO].super(super_id);
 ALTER TABLE [EL_UNICO].empleado ADD CONSTRAINT FK_empl_sucursal FOREIGN KEY(empleado_sucursal_id) REFERENCES [EL_UNICO].sucursal(sucursal_id);
 ALTER TABLE [EL_UNICO].caja ADD CONSTRAINT FK_caja_tipo_caja FOREIGN KEY(caja_tipo_caja_id) REFERENCES [EL_UNICO].tipo_caja(tipo_caja_id);
 ALTER TABLE [EL_UNICO].subcategoria ADD CONSTRAINT FK_subcat_categoria FOREIGN KEY(subcategoria_categoria_id) REFERENCES [EL_UNICO].categoria(categoria_id);
 ALTER TABLE [EL_UNICO].producto ADD CONSTRAINT FK_prod_subcategoria FOREIGN KEY(producto_subcategoria_id) REFERENCES [EL_UNICO].subcategoria(subcategoria_id);
+ALTER TABLE [EL_UNICO].producto ADD CONSTRAINT FK_prod_marca FOREIGN KEY(producto_marca_id) REFERENCES [EL_UNICO].marca(marca_id);
 ALTER TABLE [EL_UNICO].promocion_x_regla ADD CONSTRAINT FK_promo_x_regla FOREIGN KEY(promocion_id) REFERENCES [EL_UNICO].promocion(promocion_id);
 ALTER TABLE [EL_UNICO].promocion_x_regla ADD CONSTRAINT FK_regla FOREIGN KEY(regla_id) REFERENCES [EL_UNICO].regla(regla_id);
 ALTER TABLE [EL_UNICO].promocion_x_producto ADD CONSTRAINT FK_producto FOREIGN KEY(producto_id) REFERENCES [EL_UNICO].producto(producto_id);
 ALTER TABLE [EL_UNICO].promocion_x_producto ADD CONSTRAINT FK_promo_x_prod FOREIGN KEY(promocion_id) REFERENCES [EL_UNICO].promocion(promocion_id);
-
+ALTER TABLE [EL_UNICO].medio_de_pago ADD CONSTRAINT FK_tipo_medio_pago FOREIGN KEY(medio_pago_tipo_id) REFERENCES [EL_UNICO].tipo_medio_pago(tipo_medio_pago_id);
+ALTER TABLE [EL_UNICO].descuento_x_medio_de_pago ADD CONSTRAINT FK_descuento_codigo FOREIGN KEY(descuento_codigo) REFERENCES [EL_UNICO].descuento(descuento_codigo);
+ALTER TABLE [EL_UNICO].descuento_x_medio_de_pago ADD CONSTRAINT FK_medio_de_pago FOREIGN KEY(medio_de_pago_id) REFERENCES [EL_UNICO].medio_de_pago(medio_pago_id);
+ALTER TABLE [EL_UNICO].ticket ADD CONSTRAINT FK_tick_tipo_comprobante FOREIGN KEY(ticket_tipo_comprobante_id) REFERENCES [EL_UNICO].tipo_comprobante(tipo_compr_id);
+ALTER TABLE [EL_UNICO].ticket ADD CONSTRAINT FK_tick_caja_id FOREIGN KEY(ticket_caja_id) REFERENCES [EL_UNICO].caja(caja_id);
+ALTER TABLE [EL_UNICO].ticket ADD CONSTRAINT FK_empleado FOREIGN KEY(ticket_empleado_id) REFERENCES [EL_UNICO].empleado(empleado_id);
+ALTER TABLE [EL_UNICO].ticket ADD CONSTRAINT FK_sucursal FOREIGN KEY(ticket_sucursal_id) REFERENCES [EL_UNICO].sucursal(sucursal_id);
+ALTER TABLE [EL_UNICO].pago ADD CONSTRAINT FK_pago_ticket FOREIGN KEY(pago_ticket_id) REFERENCES [EL_UNICO].ticket(ticket_id)
+ALTER TABLE [EL_UNICO].pago ADD CONSTRAINT FK_pago_medio_pago FOREIGN KEY(pago_medio_pago_id) REFERENCES [EL_UNICO].medio_de_pago(medio_pago_id)
+--ALTER TABLE [EL_UNICO].pago ADD CONSTRAINT FK_pago_tarjeta FOREIGN KEY(pago_tarjeta_id) REFERENCES [EL_UNICO].tarjeta(tarjeta_id)
 GO
 
 
@@ -421,41 +511,6 @@ INSERT INTO [EL_UNICO].envio_estado (envio_estado_detalle)
 DECLARE @cantEnvioEstados NVARCHAR(255)
 SET @cantEnvioEstados = (SELECT COUNT(*) FROM [EL_UNICO].envio_estado)
 PRINT('Se agregaron ' + @cantEnvioEstados + ' envio_estado')
-
-----------
-	INSERT INTO [EL_UNICO].envio (envio_fecha_programada, envio_hora_inicio, envio_hora_fin, envio_cliente_id, envio_costo, envio_envio_estado_id, envio_fecha_entrega)
-	SELECT distinct ENVIO_FECHA_PROGRAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN, cliente_id, ENVIO_COSTO, envio_estado_id, ENVIO_FECHA_ENTREGA
-	FROM gd_esquema.Maestra M JOIN [EL_UNICO].cliente c ON M.CLIENTE_APELLIDO = c.cliente_apellido AND M.CLIENTE_NOMBRE = c.cliente_nombre AND M.CLIENTE_DNI = c.cliente_dni
-							JOIN [EL_unico].envio_estado ON ENVIO_ESTADO = envio_estado_detalle
-
-/*
-	SELECT distinct ENVIO_FECHA_PROGRAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN, CLIENTE_DNI, ENVIO_COSTO, ENVIO_ESTADO, ENVIO_FECHA_ENTREGA
-	FROM gd_esquema.Maestra 
-	WHERE ENVIO_FECHA_PROGRAMADA IS NOT NULL 	
-	order by 1
-	---- 6862 ojo hay ticket_numero con dos envios 
-
-SELECT t.TICKET_NUMERO, count(t.TICKET_NUMERO)
-FROM (SELECT distinct TICKET_NUMERO,ENVIO_FECHA_PROGRAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN, null as cliente, ENVIO_COSTO, ENVIO_ESTADO, ENVIO_FECHA_ENTREGA
-	FROM gd_esquema.Maestra 
-	WHERE ENVIO_FECHA_PROGRAMADA IS NOT NULL 	
-	---6862
-	) AS T
-group by t.TICKET_NUMERO
-order by 2 desc
- revisar estos casos de ticket_numero:
-
-1352902143
-1353200657-- unico que no tiene dos medios de pago
-1353794555
-1353722924
-1354396504
-
-por lo que el ticket numero No va hacer lo mismo que ticket_id
-*/
-DECLARE @cantEnvios NVARCHAR(255)
-SET @cantEnvios = (SELECT COUNT(*) FROM [EL_UNICO].envio)
-PRINT('Se agregaron ' + @cantEnvios + ' envios')
 
 ------------
 INSERT INTO [EL_UNICO].sucursal (sucursal_nombre, sucursal_direccion_id, sucursal_super_id)
@@ -611,7 +666,7 @@ SET @marcasDeProducto = (SELECT COUNT(*) FROM [EL_UNICO].marca)
 PRINT('Se agregaron ' + @marcasDeProducto + ' marcas De Producto')
 
 -----------
-INSERT INTO [EL_UNICO].producto (producto_nombre, producto_descripcion, producto_precio, producto_marca, producto_subcategoria_id)
+INSERT INTO [EL_UNICO].producto (producto_nombre, producto_descripcion, producto_precio, producto_marca_id, producto_subcategoria_id)
 	SELECT distinct PRODUCTO_NOMBRE,PRODUCTO_DESCRIPCION, PRODUCTO_PRECIO, marca_id, subcategoria_id
 	FROM gd_esquema.Maestra JOIN [EL_UNICO].marca ON PRODUCTO_MARCA = marca_detalle
 							JOIN [EL_UNICO].categoria ON PRODUCTO_CATEGORIA = categoria_detalle
@@ -715,7 +770,7 @@ INSERT INTO [EL_UNICO].promocion_x_producto (producto_id, promocion_id)
 	FROM gd_esquema.Maestra M JOIN [EL_UNICO].categoria ON M.PRODUCTO_CATEGORIA = categoria_detalle
 							  JOIN [EL_UNICO].subcategoria ON M.PRODUCTO_SUB_CATEGORIA = subcategoria_detalle AND subcategoria_categoria_id = categoria_id
 							  JOIN [EL_UNICO].marca ON m.PRODUCTO_MARCA = marca_detalle
-							  JOIN [EL_UNICO].producto prod ON M.PRODUCTO_NOMBRE = prod.producto_nombre AND M.PRODUCTO_DESCRIPCION = prod.producto_descripcion AND  M.PRODUCTO_PRECIO = prod.producto_precio AND prod.producto_marca = marca_id AND prod.producto_subcategoria_id = subcategoria_id
+							  JOIN [EL_UNICO].producto prod ON M.PRODUCTO_NOMBRE = prod.producto_nombre AND M.PRODUCTO_DESCRIPCION = prod.producto_descripcion AND  M.PRODUCTO_PRECIO = prod.producto_precio AND prod.producto_marca_id = marca_id AND prod.producto_subcategoria_id = subcategoria_id
 							  JOIN [EL_UNICO].promocion p ON M.PROMOCION_DESCRIPCION = p.promocion_descripcion AND M.PROMOCION_FECHA_INICIO = p.promocion_fecha_inicio AND M.PROMOCION_FECHA_FIN = P.promocion_fecha_fin
 /*
 SELECT distinct PROMOCION_DESCRIPCION, PROMOCION_FECHA_INICIO, PROMOCION_FECHA_FIN, PRODUCTO_NOMBRE, PRODUCTO_DESCRIPCION, PRODUCTO_MARCA, PRODUCTO_SUB_CATEGORIA,PRODUCTO_CATEGORIA
@@ -793,11 +848,16 @@ WHERE TICKET_NUMERO = '1354176996'
 */
 
 -----------
-INSERT INTO [EL_UNICO].promo (promo_codigo)
-	SELECT distinct PROMO_CODIGO
+INSERT INTO [EL_UNICO].promo (promo_codigo, promo_aplica_descuento)
+	SELECT distinct PROMO_CODIGO, PROMO_APLICADA_DESCUENTO
 	FROM gd_esquema.Maestra
 	WHERE PROMO_CODIGO IS NOT NULL
 	order by 1
+
+	/*
+	antes -- 132
+	ahora -- 94341
+	*/
 
 DECLARE @promo_codigo NVARCHAR(255)
 SET @promo_codigo = (SELECT COUNT(*) FROM [EL_UNICO].promo)
@@ -815,17 +875,21 @@ SET @tipos_de_medio_de_pago = (SELECT COUNT(*) FROM [EL_UNICO].tipo_medio_pago)
 PRINT('Se agregaron ' + @tipos_de_medio_de_pago + ' tipos de medio de pago')
 
 -----------
-INSERT INTO [EL_UNICO].medio_pago()
-
-SELECT distinct PAGO_MEDIO_PAGO
-FROM gd_esquema.Maestra
-WHERE PAGO_MEDIO_PAGO is not null 
---7
-SELECT distinct PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO, DESCUENTO_TOPE, DESCUENTO_DESCRIPCION
+INSERT INTO [EL_UNICO].medio_de_pago(medio_pago_detalle, medio_pago_tipo_id)
+	SELECT distinct PAGO_MEDIO_PAGO, tipo_medio_pago_id
+	FROM gd_esquema.Maestra JOIN [EL_UNICO].tipo_medio_pago ON PAGO_TIPO_MEDIO_PAGO = tipo_medio_pago_detalle
+	WHERE PAGO_MEDIO_PAGO is not null 
+/*
+SELECT distinct PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO
 FROM gd_esquema.Maestra
 WHERE PAGO_MEDIO_PAGO is not null
 --7
+*/
+DECLARE @medios_de_pago NVARCHAR(255)
+SET @medios_de_pago = (SELECT COUNT(*) FROM [EL_UNICO].medio_de_pago)
+PRINT('Se agregaron ' + @medios_de_pago + ' medios de pago')
 
+/*
 ---- un descuento codigo se utiliza en varios medios de pago
 SELECT T.DESCUENTO_CODIGO, COUNT(T.DESCUENTO_CODIGO)
 FROM (
@@ -856,7 +920,7 @@ FROM gd_esquema.Maestra
 WHERE TICKET_NUMERO IS NOT NULL AND PAGO_IMPORTE IS NOT NULL  AND PAGO_TARJETA_NRO IS NOT NULL ) as t
 GROUP BY TICKET_NUMERO
 order by TICKET_NUMERO desc
-
+*/
 /*
 ------------para ver que hay ticket numeros que se pagaron en varias formas de pago
 SELECT z.ticket_numero, z.TICKET_TOTAL_ENVIO ,count(z.TICKET_NUMERO)
@@ -878,8 +942,223 @@ FROM gd_esquema.Maestra
 WHERE TICKET_NUMERO = '1351540937'
 */
 
+------------
+INSERT INTO [EL_UNICO].descuento(descuento_codigo, descuento_Descripcion, descuento_fecha_inicio, descuento_fecha_fin, descuento_porcentaje_desc, descuento_tope)
+	SELECT distinct DESCUENTO_CODIGO, DESCUENTO_DESCRIPCION,  DESCUENTO_FECHA_INICIO, DESCUENTO_FECHA_FIN, DESCUENTO_PORCENTAJE_DESC, DESCUENTO_TOPE
+	FROM gd_esquema.Maestra
+	WHERE DESCUENTO_CODIGO  IS NOT NULL
+	--308 descuento_codigo y con todo distinto siguen siendo 308
+	order by 1
+
+DECLARE @descuentos NVARCHAR(255)
+SET @descuentos = (SELECT COUNT(*) FROM [EL_UNICO].descuento)
+PRINT('Se agregaron ' + @descuentos + ' descuentos')
+
+------------
+INSERT INTO [EL_UNICO].descuento_x_medio_de_pago(descuento_codigo, medio_de_pago_id)
+	SELECT distinct DESCUENTO_CODIGO, medio_pago_id
+	FROM gd_esquema.Maestra JOIN [EL_UNICO].tipo_medio_pago ON PAGO_TIPO_MEDIO_PAGO = tipo_medio_pago_detalle 
+							JOIN [EL_UNICO].medio_de_pago ON PAGO_MEDIO_PAGO = medio_pago_detalle AND medio_pago_tipo_id = tipo_medio_pago_id
+/*
+	SELECT distinct DESCUENTO_CODIGO, PAGO_MEDIO_PAGO 
+	FROM gd_esquema.Maestra
+	WHERE DESCUENTO_CODIGO IS NOT NULL
+	order by 1
+	--308  sin el distinct 17068 
+*/
+
+DECLARE @descuentos_x_medio_de_pago NVARCHAR(255)
+SET @descuentos_x_medio_de_pago = (SELECT COUNT(*) FROM [EL_UNICO].descuento_x_medio_de_pago)
+PRINT('Se agregaron ' + @descuentos_x_medio_de_pago + ' descuentos_x_medio_de_pago, significa que un descuento esta aplicada en un solo medio de pago, segun la base de datos antigua')
+
+------------
+/*
+INSERT INTO [EL_UNICO].tarjeta(pago_tarjeta_nro, pago_tarjetas_cuotas, pago_tarjetas_fecha_venc)
+	SELECT distinct PAGO_TARJETA_NRO, PAGO_TARJETA_CUOTAS, PAGO_TARJETA_FECHA_VENC
+	FROM gd_esquema.Maestra
+	WHERE PAGO_TARJETA_NRO IS NOT NULL
+	--14553
+
+DECLARE @tarjetas NVARCHAR(255)
+SET @tarjetas = (SELECT COUNT(*) FROM [EL_UNICO].tarjeta)
+PRINT('Se agregaron ' + @tarjetas + ' tarjetas')
+*/
+----------
+
+INSERT INTO [EL_UNICO].ticket(ticket_numero, ticket_fecha_hora, ticket_tipo_comprobante_id, ticket_caja_id, ticket_empleado_id, ticket_sucursal_id, ticket_subtotal_productos, ticket_total_envio, ticket_total_descuento_aplicado, ticket_total_descuento_aplicado_mp,ticket_total_ticket)
+	SELECT distinct TICKET_NUMERO, TICKET_FECHA_HORA, tipo_compr_id, caja_id, empleado_id, sucursal_id,  TICKET_SUBTOTAL_PRODUCTOS, TICKET_TOTAL_ENVIO, TICKET_TOTAL_DESCUENTO_APLICADO, TICKET_TOTAL_DESCUENTO_APLICADO_MP, TICKET_TOTAL_TICKET
+	FROM gd_esquema.Maestra M JOIN [EL_UNICO].sucursal s ON M.SUCURSAL_NOMBRE = s.sucursal_nombre 
+							  JOIN [EL_UNICO].empleado e ON M.EMPLEADO_NOMBRE = e.empleado_nombre AND M.EMPLEADO_APELLIDO = e.empleado_apellido AND M.EMPLEADO_DNI = e.empleado_dni
+							  JOIN [EL_UNICO].tipo_caja ON CAJA_TIPO = tipo_caja_detalle
+							  JOIN [EL_UNICO].caja c ON M.CAJA_NUMERO = c.caja_numero AND caja_tipo_caja_id = tipo_caja_id
+							  JOIN [EL_UNICO].tipo_comprobante ON TICKET_TIPO_COMPROBANTE = tipo_compr_detalle
+	WHERE TICKET_NUMERO IS NOT NULL
+	
+/*
+--- select completo
+SELECT distinct TICKET_NUMERO, TICKET_FECHA_HORA, TICKET_TIPO_COMPROBANTE, NULL as caja_id, NULL as empleado, NULL as sucursal,  TICKET_SUBTOTAL_PRODUCTOS, TICKET_TOTAL_ENVIO, TICKET_TOTAL_DESCUENTO_APLICADO, TICKET_TOTAL_DESCUENTO_APLICADO_MP, TICKET_TOTAL_TICKET, NULL as envio_id
+FROM gd_esquema.Maestra
+WHERE TICKET_NUMERO IS NOT NULL
+--17068 con todas las restricciones conocidas nos da 
+
+--verificacion
+	SELECT *
+	FROM gd_esquema.Maestra	
+	WHERE TICKET_NUMERO IS NOT NULL AND TICKET_NUMERO = '1354621475'
+--
+*/
+
+DECLARE @tickets NVARCHAR(255)
+SET @tickets = (SELECT COUNT(*) FROM [EL_UNICO].ticket)
+PRINT('Se agregaron ' + @tickets + ' tickets')
+
+----------
+	/*
 
 
+	--priemra iteracion
+	SELECT distinct TICKET_NUMERO	
+	FROM gd_esquema.Maestra
+	WHERE TICKET_NUMERO IS NOT NULL
+	--17025 ticket_numero distintos
+
+	SELECT distinct TICKET_NUMERO, TICKET_TOTAL_ENVIO
+	FROM gd_esquema.Maestra
+	WHERE TICKET_NUMERO IS NOT NULL
+	--con la restriccion del envio hay 17051
+
+	SELECT distinct TICKET_NUMERO, TICKET_TOTAL_ENVIO, TICKET_TIPO_COMPROBANTE
+	FROM gd_esquema.Maestra
+	WHERE TICKET_NUMERO IS NOT NULL
+	--con la restriccion del envio y el tipo de comprobante hay 17060
+
+	SELECT distinct TICKET_NUMERO, TICKET_TOTAL_ENVIO, TICKET_TIPO_COMPROBANTE, ticket_fecha_hora
+	FROM gd_esquema.Maestra
+	WHERE TICKET_NUMERO IS NOT NULL
+	--con la restriccion del envio y el tipo de comprobante y la fecha hay 17068
+
+	-------------- otra forma mas rapida de llegar
+	SELECT distinct TICKET_NUMERO, TICKET_FECHA_HORA
+	FROM gd_esquema.Maestra
+	WHERE TICKET_NUMERO IS NOT NULL
+	order by 1
+	--con la restriccion de la fecha hay 17068
+	
+	
+	SELECT EMPLEADO_APELLIDO, EMPLEADO_DNI, CLIENTE_APELLIDO, CLIENTE_DNI
+	FROM gd_esquema.Maestra	
+	WHERE TICKET_NUMERO IS NOT NULL AND TICKET_NUMERO = '1354621475'
+
+	*/
+
+----------
+	INSERT INTO [EL_UNICO].envio (envio_fecha_programada, envio_hora_inicio, envio_hora_fin, envio_cliente_id, envio_ticket_id, envio_costo, envio_envio_estado_id, envio_fecha_entrega)
+	SELECT distinct ENVIO_FECHA_PROGRAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN, cliente_id, ticket_id, ENVIO_COSTO, envio_estado_id, ENVIO_FECHA_ENTREGA
+	FROM gd_esquema.Maestra M JOIN [EL_UNICO].cliente c ON M.CLIENTE_APELLIDO = c.cliente_apellido AND M.CLIENTE_NOMBRE = c.cliente_nombre AND M.CLIENTE_DNI = c.cliente_dni
+							  JOIN [EL_UNICO].ticket t ON M.TICKET_NUMERO = t.ticket_numero AND M.ticket_fecha_hora = t.ticket_fecha_hora
+							  JOIN [EL_unico].envio_estado ON ENVIO_ESTADO = envio_estado_detalle
+
+/*
+	SELECT distinct ENVIO_FECHA_PROGRAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN, CLIENTE_DNI, ENVIO_COSTO, ENVIO_ESTADO, ENVIO_FECHA_ENTREGA
+	FROM gd_esquema.Maestra 
+	WHERE ENVIO_FECHA_PROGRAMADA IS NOT NULL 	
+	order by 1
+	---- 6862 ojo hay ticket_numero con dos envios 
+
+SELECT t.TICKET_NUMERO, count(t.TICKET_NUMERO)
+FROM (SELECT distinct TICKET_NUMERO,ENVIO_FECHA_PROGRAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN, null as cliente, ENVIO_COSTO, ENVIO_ESTADO, ENVIO_FECHA_ENTREGA
+	FROM gd_esquema.Maestra 
+	WHERE ENVIO_FECHA_PROGRAMADA IS NOT NULL 	
+	---6862
+	) AS T
+group by t.TICKET_NUMERO
+order by 2 desc
+ revisar estos casos de ticket_numero:
+
+1352902143
+1353200657-- unico que no tiene dos medios de pago
+1353794555
+1353722924
+1354396504
+
+por lo que el ticket numero No va hacer lo mismo que ticket_id
+*/
+DECLARE @cantEnvios NVARCHAR(255)
+SET @cantEnvios = (SELECT COUNT(*) FROM [EL_UNICO].envio)
+PRINT('Se agregaron ' + @cantEnvios + ' envios')
+
+-------------
+INSERT INTO [EL_UNICO].pago(pago_ticket_id, pago_fecha, pago_medio_pago_id, pago_descuento_aplicado, pago_importe, pago_tarjeta_nro, pago_tarjetas_cuotas, pago_tarjetas_fecha_venc)
+	SELECT ticket_id, PAGO_FECHA, medio_pago_id, PAGO_DESCUENTO_APLICADO, PAGO_IMPORTE, PAGO_TARJETA_NRO, PAGO_TARJETA_CUOTAS,PAGO_TARJETA_FECHA_VENC
+	FROM gd_esquema.Maestra M JOIN [EL_UNICO].ticket t ON M.TICKET_NUMERO = t.ticket_numero AND M.ticket_fecha_hora = t.ticket_fecha_hora
+							  JOIN [EL_UNICO].medio_de_pago ON PAGO_MEDIO_PAGO = medio_pago_detalle --verificar si es necesario expandir
+							  --LEFT JOIN [EL_UNICO].tarjeta ta ON M.PAGO_TARJETA_NRO = ta.pago_tarjeta_nro
+
+/*
+SELECT distinct PAGO_FECHA, PAGO_IMPORTE, PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO, PAGO_TARJETA_NRO, PAGO_DESCUENTO_APLICADO, PAGO_TARJETA_CUOTAS, PAGO_TARJETA_FECHA_VENC
+FROM gd_esquema.Maestra
+WHERE PAGO_FECHA is not null
+--17068
+*/
+
+DECLARE @pagos NVARCHAR(255)
+SET @pagos = (SELECT COUNT(*) FROM [EL_UNICO].pago)
+PRINT('Se agregaron ' + @pagos + ' pagos')
+
+-------------
+INSERT INTO [EL_UNICO].ticket_detalle(ticket_id, prodcuto_id, ticket_det_cantidad, ticket_det_precio, ticket_det_total, ticket_det_promo_id)
+	SELECT distinct ticket_id, producto_id, TICKET_DET_CANTIDAD, TICKET_DET_PRECIO, TICKET_DET_TOTAL, pr.promo_id 
+	FROM gd_esquema.Maestra M LEFT JOIN [EL_UNICO].ticket t ON M.TICKET_NUMERO = t.ticket_numero AND M.ticket_fecha_hora = t.ticket_fecha_hora
+							  JOIN [EL_UNICO].marca ON M.PRODUCTO_MARCA = marca_detalle
+							  JOIN [EL_UNICO].categoria ON M.PRODUCTO_CATEGORIA = categoria_detalle
+							  JOIN [EL_UNICO].subcategoria ON M.PRODUCTO_SUB_CATEGORIA = subcategoria_detalle AND subcategoria_categoria_id = categoria_id
+							  JOIN [EL_UNICO].producto p ON M.PRODUCTO_NOMBRE = p.producto_nombre AND M.PRODUCTO_DESCRIPCION = p.producto_descripcion AND p.producto_marca_id = marca_id AND  p.producto_subcategoria_id = subcategoria_id 
+							  LEFT JOIN [EL_UNICO].promo pr ON M.PROMO_CODIGO = pr.promo_codigo AND M.PROMO_APLICADA_DESCUENTO = pr.promo_aplica_descuento
+
+/*							  
+-- cantidad total de detalles ticket hay
+SELECT distinct TICKET_NUMERO, TICKET_FECHA_HORA, TICKET_DET_CANTIDAD, TICKET_DET_PRECIO, TICKET_DET_TOTAL, PROMO_CODIGO, PROMO_APLICADA_DESCUENTO
+FROM gd_esquema.Maestra
+WHERE TICKET_DET_CANTIDAD is not null AND TICKET_DET_PRECIO is not null AND TICKET_DET_TOTAL is not null
+--273177
+
+---------------------------------
+SELECT t.ticket_numero, t.ticket_fecha_hora, td.ticket_det_cantidad, td.ticket_det_precio, td.ticket_det_total, promo_codigo, promo_aplica_descuento
+FROM [EL_UNICO].ticket_detalle td JOIN [EL_UNICO].ticket t ON td.ticket_id = t.ticket_id
+								  LEFT JOIN [EL_UNICO].promo ON td.ticket_det_promo_id = promo_id
+								  -- recordatorio usar left join
+--273177
+
+
+--273177
+--encontre los repetidos don 12 elementos por ejemplo el ticket_numero:
+		ticket_numero = 1352626547 
+		ticket_fecha_hora = 2024-04-29 09:00:00.000 
+		ticket_det_cantidad = 7 
+		ticket_det_precio = 2767.28 
+		ticket_det_total = 19370.96 
+
+--informacion de ese ticket
+SELECt *
+FROM [EL_UNICO].ticket
+WHERE ticket_numero = '1352626547'
+-- 
+SELECT *
+FROM [EL_UNICO].ticket_detalle
+WHERE ticket_id = 2362
+
+
+*/
+
+
+
+DECLARE @ticket_detalles NVARCHAR(255)
+SET @ticket_detalles = (SELECT COUNT(*) FROM [EL_UNICO].ticket_detalle)
+PRINT('Se agregaron ' + @ticket_detalles + ' ticket_detalles')
+
+
+
+-------------
 PRINT('')
 PRINT('SE LLENARON LAS TABLAS :)')
 GO
@@ -954,4 +1233,25 @@ SELECT *
 FROM gd_esquema.Maestra
 WHERE TICKET_NUMERO = '1354176996'
 -- difieree en: ticket_det_cantidad,..det..,empleado_nombre, pago_fecha, pago...,
+*/
+
+/*
+ver este caso tambien:
+la tabla antigua te trae dos datos iguales
+SELECT *
+FROM gd_esquema.Maestra
+WHERE ticket_numero = 1352626547 AND ticket_fecha_hora = '2024-04-29 09:00:00.000' AND ticket_det_cantidad = 7 AND ticket_det_precio = 2767.28 AND ticket_det_total = 19370.96 
+
+para encontrarlo use con la tabla ticket detalle sin distinct en su creacion
+SELECT z.ticket_numero, z.ticket_fecha_hora, z.ticket_det_cantidad, z.ticket_det_precio, z.ticket_det_total, count(z.ticket_numero)
+FROM (
+SELECT t.ticket_numero, t.ticket_fecha_hora, td.ticket_det_cantidad, td.ticket_det_precio, td.ticket_det_total--, promo_codigo, promo_aplica_descuento
+FROM [EL_UNICO].ticket_detalle td JOIN [EL_UNICO].ticket t ON td.ticket_id = t.ticket_id
+								  --JOIN [EL_UNICO].promo ON td.ticket_det_promo_id = promo_id
+--273189
+--EXCEPT
+)as z
+GROUP by z.ticket_numero, z.ticket_fecha_hora, z.ticket_det_cantidad, z.ticket_det_precio, z.ticket_det_total
+order by count(z.ticket_numero) desc
+
 */
